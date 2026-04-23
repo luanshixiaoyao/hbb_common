@@ -118,7 +118,18 @@ lazy_static::lazy_static! {
     pub static ref OVERWRITE_DISPLAY_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
     pub static ref DEFAULT_LOCAL_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
     pub static ref OVERWRITE_LOCAL_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
-    pub static ref HARD_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
+    pub static ref HARD_SETTINGS: RwLock<HashMap<String, String>> = {
+    let mut map = HashMap::new();
+    // API 服务器
+    map.insert(keys::OPTION_API_SERVER.to_string(), "https://yc.2ccf.com".to_string());
+    // 自定义 ID 服务器
+    map.insert(keys::OPTION_CUSTOM_RENDEZVOUS_SERVER.to_string(), "120.224.79.225:21116".to_string());
+    // 中继服务器
+    map.insert(keys::OPTION_RELAY_SERVER.to_string(), "120.224.79.225:21117".to_string());
+    // 公钥
+    map.insert(keys::OPTION_KEY.to_string(), "L0KAI6Qxq2C0XsSPJFDUM8PhKTtRdLSytu0D3Nbx+c4=".to_string());
+    RwLock::new(map)
+};
     pub static ref BUILTIN_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
 }
 
@@ -1180,14 +1191,18 @@ impl Config {
     }
 
     pub fn get_option(k: &str) -> String {
-        get_or(
-            &OVERWRITE_SETTINGS,
-            &CONFIG2.read().unwrap().options,
-            &DEFAULT_SETTINGS,
-            k,
-        )
-        .unwrap_or_default()
+    // 硬编码设置拥有最高优先级
+    if let Some(v) = HARD_SETTINGS.read().unwrap().get(k) {
+        return v.clone();
     }
+    get_or(
+        &OVERWRITE_SETTINGS,
+        &CONFIG2.read().unwrap().options,
+        &DEFAULT_SETTINGS,
+        k,
+    )
+    .unwrap_or_default()
+}
 
     pub fn get_bool_option(k: &str) -> bool {
         option2bool(k, &Self::get_option(k))
@@ -2098,14 +2113,18 @@ impl LocalConfig {
     }
 
     pub fn get_option(k: &str) -> String {
-        get_or(
-            &OVERWRITE_LOCAL_SETTINGS,
-            &LOCAL_CONFIG.read().unwrap().options,
-            &DEFAULT_LOCAL_SETTINGS,
-            k,
-        )
-        .unwrap_or_default()
+    // 硬编码设置拥有最高优先级
+    if let Some(v) = HARD_SETTINGS.read().unwrap().get(k) {
+        return v.clone();
     }
+    get_or(
+        &OVERWRITE_SETTINGS,
+        &CONFIG2.read().unwrap().options,
+        &DEFAULT_SETTINGS,
+        k,
+    )
+    .unwrap_or_default()
+}
 
     // Usually get_option should be used.
     pub fn get_option_from_file(k: &str) -> String {
